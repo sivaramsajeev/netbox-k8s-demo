@@ -1,0 +1,99 @@
+---
+- name: Netbox setup
+  hosts: localhost
+  become: yes
+  tasks:
+  - name: Install required packages
+    apt:
+      name: "{{ item }}"
+      state: present
+    loop:
+      - python3
+      - python3-pip
+      - python3-venv
+      - python3-dev
+      - build-essential
+      - libxml2-dev
+      - libxslt1-dev
+      - libffi-dev
+      - libpq-dev
+      - libssl-dev
+      - zlib1g-dev
+      - git
+
+  - name: Check Python version
+    command: python3 -V
+    register: python3_version
+    changed_when: false
+
+  - name: Display the Python version
+    debug:
+      var: python3_version.stdout_lines
+
+  - name: Create NetBox directory
+    file:
+      path: '{{ netbox_installation_directory }}'
+      state: directory
+
+  - name: Clone NetBox repository
+    git:
+      repo: https://github.com/netbox-community/netbox.git
+      dest: '{{ netbox_installation_directory }}'
+      version: master
+      depth: 1
+
+  - name: Create NetBox system group
+    group:
+      name: '{{ db_user }}'
+
+  - name: Create NetBox system user
+    user:
+      name: '{{ db_user }}'
+      system: yes
+      group: '{{ db_user}}'
+
+  - name: Change ownership of NetBox directories
+    file:
+      path: "{{ netbox_installation_directory }}/netbox/{{ item }}"
+      owner: netbox
+      recurse: yes
+    loop:
+      - media/
+      - reports/
+      - scripts/
+
+  - name: Copy NetBox configuration script
+    template:
+      src: configuration.py.j2
+      dest: '{{ netbox_installation_directory }}/netbox/netbox/configuration.py'
+
+  - name: Generate SECRET_KEY
+    command: python3 {{ netbox_installation_directory }}/netbox/generate_secret_key.py
+    register: secret_key
+
+  - name: Add the secret key
+    lineinfile:
+      path: '{{ netbox_installation_directory }}/netbox/netbox/configuration.py'
+      regexp: '^SECRET_KEY ='
+      line: 'SECRET_KEY = "{{ secret_key.stdout_lines[0] }}"'
+
+  - name: Run NetBox upgrade script
+    command: '{{ netbox_installation_directory }}/upgrade.sh'
+
+  - name: Create Netbox superuser
+    shell: |
+      echo "from django.contrib.auth.models import User; \
+      User.objects.filter(username='{{ ui_admin }}').exists() \
+      or User.objects.create_superuser('{{ ui_admin }}', '{{ ui_admin_email }}','{{ ui_admin_password }}' )" \
+      | {{ python_venv_path }} {{ netbox_installation_directory }}/netbox/manage.py shell
+
+  - name: Create a symbolic link for NetBox housekeeping
+    file:
+      src: '{{ netbox_installation_directory }}/contrib/netbox-housekeeping.sh'
+      dest: /etc/cron.daily/netbox-housekeeping
+      state: link
+
+  - name: Start NetBox
+    command: '{{ python_venv_path }} {{ netbox_installation_directory }}/netbox/manage.py runserver 0.0.0.0:8000 --insecure'
+    args:
+      chdir: '{{ netbox_installation_directory }}'

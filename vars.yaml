@@ -1,0 +1,39 @@
+---
+# vars file for setup_netbox
+netbox_installation_directory: /opt/netbox
+python_venv_path: '{{netbox_installation_directory }}/venv/bin/python'
+
+allowed_host: '*'
+crypto_key: '1vhOs$hPHoDS_6cJmsdQJAV)_@ZYTUj76UjzFG+Onf_o)W(z4c'
+
+#admin UI
+ui_admin: 'admin'
+ui_admin_email: 'admin@netbox.com'
+ui_admin_password: 'admin@123'
+
+#postgres DB 
+postgres_login_user: postgres
+postgres_login_password: your_postgres_password
+
+db_host: postgres-db-service
+db_name: netbox
+db_user: netbox 
+db_user_password: J5brHrAXFLQSif0K
+
+redis_host: 'redis-service'
+
+# ansible_become_pass: '^escalate_me$'
+# ansible_user: ansible
+
+
+### Self generated SSL certs
+
+ssl_cert:
+  country: UK
+  state: Manchester
+  location: Preston
+  organization: DevNetPro
+  organizational_unit: SecOps
+  common_name: ui.devnet.com
+  dns_name: ui.devnet.com
+  
