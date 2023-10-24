@@ -2,20 +2,21 @@
 - Helps with local testing
 - Iterative development
 
+```
+Generate K8s secret: 
+python3 generate_k8s_secret.py
+```
 
+Docker Build: `docker build . -t sivaramsajeev/netbox-for-k8s && docker push sivaramsajeev/netbox-for-k8s`
 
-Steps:
+In case of local KIND cluster: `kind load docker-image --name netbox-demo sivaramsajeev/netbox-for-k8s`
 
-docker run -it arm64v8/ubuntu:22.04 /bin/bash
-apt update -y && apt install -y ansible
-ansible localhost -m command -a "uptime"
-ansible-playbook -i localhost -e @vars.yaml install_netbox.yaml
-
-
-docker build . -t sivaramsajeev/netbox-for-k8s
-kind load docker-image --name netbox-demo netbox-for-k8s
+```
+for f in `grep -l apiVersion * | grep "yaml$"`;do kubectl apply -f $f;done
 
 kubectl port-forward service/netbox-service 8000:80
+```
+
 
 
 
